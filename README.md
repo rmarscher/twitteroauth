@@ -8,10 +8,14 @@ Fork of abraham's OAuth library for Twitter's REST API. This version uses the pe
 Note: I haven't updated the documentation or examples yet.
 
 Reasons for forking this project:
+
 * C-extensions are inherently faster than PHP libraries
-* pecl/oauth has support of PHP creator Rasmus Lerdorf (see http://toys.lerdorf.com/archives/50-Using-pecloauth-to-post-to-Twitter.html)
+* pecl/oauth has support of PHP creator Rasmus Lerdorf 
+  (see [http://toys.lerdorf.com/archives/50-Using-pecloauth-to-post-to-Twitter.html](http://toys.lerdorf.com/archives/50-Using-pecloauth-to-post-to-Twitter.html))
 * pecl/oauth can send OAuth Authorization HTTP headers
-* I worked with the pecl/oauth team to add support for multipart form posts that enable uploading profile images and background images to your twitter profile (see http://pecl.php.net/bugs/bug.php?id=17782)
+* I worked with the pecl/oauth team to add support for multipart form posts 
+  that enable uploading profile images and background images to your twitter profile 
+  (see [http://pecl.php.net/bugs/bug.php?id=17782](http://pecl.php.net/bugs/bug.php?id=17782))
 
 Original README preserved here:
 -------------------------------
