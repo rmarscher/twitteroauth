@@ -1,13 +1,15 @@
 <?php
 /**
  * @file
- * 
+ *
  */
 
 /* Load required lib files. */
 session_start();
-require_once('twitteroauth/twitteroauth.php');
+require_once(dirname(__DIR__) . '/TwitterOAuth.php');
 require_once('config.php');
+
+use twitteroauth\TwitterOAuth;
 
 /* If access tokens are not available redirect to connect page. */
 if (empty($_SESSION['access_token']) || empty($_SESSION['access_token']['oauth_token']) || empty($_SESSION['access_token']['oauth_token_secret'])) {
@@ -307,7 +309,7 @@ twitteroauth_row($method, $connection->delete($method), $connection->http_code);
 
 /**
  * Friendships Methods.
- */ 
+ */
 twitteroauth_header('Friendships Methods');
 
 /* friendships/create */

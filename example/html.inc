@@ -15,12 +15,13 @@
 
       <p>This site is a basic showcase of Twitters OAuth authentication method. If you are having issues try <a href='./clearsessions.php'>clearing your session</a>.</p>
 
-      <p>
-        Links:
-        <a href='http://github.com/abraham/twitteroauth'>Source Code</a> &amp;
-        <a href='http://wiki.github.com/abraham/twitteroauth/documentation'>Documentation</a> |
-        Contact @<a href='http://twitter.com/abraham'>abraham</a>
-      </p>
+      <?php if (!extension_loaded('oauth')) { ?>
+          <p>
+              <strong>Warning:</strong> the pecl oauth extension is required
+			  for use of this fork of the twitteroauth project.  Install
+              via `pecl install oauth`
+          </p>
+      <?php } ?>
       <hr />
       <?php if (isset($menu)) { ?>
         <?php echo $menu; ?>

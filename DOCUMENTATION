@@ -48,11 +48,10 @@ $connection->decode_json = FALSE;
 Custom useragent.
 $connection->useragent = 'Custom useragent string';
 
-Verify Twitters SSL certificate.
-$connection->ssl_verifypeer = TRUE;
 
 There are several more you can find in TwitterOAuth.php.
-
+The oauth consumer class is public and accessible at
+$connection->consumer.  See http://www.php.net/manual/en/class.oauth.php.
 
 
 EXTENDED FLOW USING EXAMPLE CODE

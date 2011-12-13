@@ -7,8 +7,10 @@
 
 /* Start session and load lib */
 session_start();
-require_once('twitteroauth/twitteroauth.php');
+require_once(dirname(__DIR__) . '/TwitterOAuth.php');
 require_once('config.php');
+
+use twitteroauth\TwitterOAuth;
 
 /* If the oauth_token is old redirect to the connect page. */
 if (isset($_REQUEST['oauth_token']) && $_SESSION['oauth_token'] !== $_REQUEST['oauth_token']) {
@@ -29,8 +31,10 @@ $_SESSION['access_token'] = $access_token;
 unset($_SESSION['oauth_token']);
 unset($_SESSION['oauth_token_secret']);
 
+$response_info = $connection->getLastResponseInfo();
+
 /* If HTTP response is 200 continue otherwise send to connect page to retry */
-if (200 == $connection->http_code) {
+if (200 == $response_info['http_code']) {
   /* The user has been verified and the access tokens can be saved for future use */
   $_SESSION['status'] = 'verified';
   header('Location: ./index.php');

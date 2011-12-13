@@ -5,8 +5,6 @@ Rob Marscher | rob@robmarscher.com
 
 Fork of abraham's OAuth library for Twitter's REST API. This version uses the pecl/oauth extension instead of a php OAuth class.
 
-Note: I haven't updated the documentation or examples yet.
-
 Reasons for forking this project:
 
 * C-extensions are inherently faster than PHP libraries
