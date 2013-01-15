@@ -11,8 +11,12 @@
 
 namespace twitteroauth;
 
+use OAuth;
+use OAuthException;
+use Exception;
+
 if (!extension_loaded('oauth')) {
-	throw new \Exception("This Twitter OAuth library requires the pecl/oauth extension");
+	throw new Exception("This Twitter OAuth library requires the pecl/oauth extension");
 }
 
 /**
@@ -20,7 +24,7 @@ if (!extension_loaded('oauth')) {
  */
 class TwitterOAuth {
 	/**
-	 * @var \OAuth
+	 * @var OAuth
 	 */
 	public $consumer;
 
@@ -28,7 +32,7 @@ class TwitterOAuth {
 	public $url;
 
 	/* Set up the API root URL. */
-	public $host = "https://api.twitter.com/1/";
+	public $host = "https://api.twitter.com/1.1/";
 
 	/**
 	 * Verify SSL Cert.
@@ -68,7 +72,7 @@ class TwitterOAuth {
 	 * construct TwitterOAuth object
 	 */
 	public function __construct($consumer_key, $consumer_secret, $oauth_token = null, $oauth_token_secret = null, $enable_debug = false) {
-		$this->consumer = new \OAuth(
+		$this->consumer = new OAuth(
 			$consumer_key,
 			$consumer_secret,
 			OAUTH_SIG_METHOD_HMACSHA1,
@@ -262,7 +266,7 @@ class TwitterOAuth {
 			}
 		}
 		$this->currentRetries = 0;
-		throw new \OAuthException("Twitter returned an error for " . $url);
+		throw new OAuthException("Twitter returned an error for " . $url);
 	}
 
 	/**
