@@ -11,8 +11,12 @@
 
 namespace twitteroauth;
 
+use Exception;
+use OAuth;
+use OAuthException;
+
 if (!extension_loaded('oauth')) {
-	throw new \Exception("This Twitter OAuth library requires the pecl/oauth extension");
+	throw new Exception("This Twitter OAuth library requires the pecl/oauth extension");
 }
 
 /**
@@ -20,7 +24,7 @@ if (!extension_loaded('oauth')) {
  */
 class TwitterOAuth {
 	/**
-	 * @var \OAuth
+	 * @var OAuth
 	 */
 	public $consumer;
 
@@ -28,7 +32,12 @@ class TwitterOAuth {
 	public $url;
 
 	/* Set up the API root URL. */
-	public $host = "https://api.twitter.com/1/";
+	public $host = "https://api.twitter.com/1.1/";
+
+	public $debug = array(
+		'enabled' => false,
+		'logger' => null,
+	);
 
 	/**
 	 * Verify SSL Cert.
@@ -68,7 +77,7 @@ class TwitterOAuth {
 	 * construct TwitterOAuth object
 	 */
 	public function __construct($consumer_key, $consumer_secret, $oauth_token = null, $oauth_token_secret = null, $enable_debug = false) {
-		$this->consumer = new \OAuth(
+		$this->consumer = new OAuth(
 			$consumer_key,
 			$consumer_secret,
 			OAUTH_SIG_METHOD_HMACSHA1,
@@ -81,12 +90,18 @@ class TwitterOAuth {
 		} else {
 			$this->token = null;
 		}
+		$this->debug['logger'] = function($msg) { error_log($msg); };
+		if ($enable_debug) {
+			$this->debug['enabled'] = true;
+			$this->consumer->enableDebug();
+		}
 	}
 
 	/**
 	 * Turns on debug for the OAuth consumer
 	 */
 	public function enableDebug() {
+		$this->debug['enabled'] = true;
 		$this->consumer->enableDebug();
 	}
 
@@ -125,16 +140,20 @@ class TwitterOAuth {
 				$responseInfo['remaining_hits'] = 0;
 				$responseInfo['reset_time_in_seconds'] = time() + $retryAfter;
 			} else {
-				$remainingHits = self::extractHeader($headers, 'X-RateLimit-Remaining:');
+				$limit = self::extractHeader($headers, 'X-Rate-Limit-Limit:');
+				if ($limit !== false) {
+					$responseInfo['limit'] = $limit;
+				}
+				$remainingHits = self::extractHeader($headers, 'X-Rate-Limit-Remaining:');
 				if ($remainingHits !== false) {
 					$responseInfo['remaining_hits'] = $remainingHits;
 				}
-				$resetTimeInSeconds = self::extractHeader($headers, 'X-RateLimit-Reset:');
+				$resetTimeInSeconds = self::extractHeader($headers, 'X-Rate-Limit-Reset:');
 				if ($resetTimeInSeconds !== false) {
 					$responseInfo['reset_time_in_seconds'] = $resetTimeInSeconds;
 				}
 			}
-			$accessLevel = self::extractHeader($headers, 'X-Access-Level');
+			$accessLevel = self::extractHeader($headers, 'X-Access-Level:');
 			if ($accessLevel !== false) {
 				$responseInfo['access_level'] = $accessLevel;
 			}
@@ -142,7 +161,18 @@ class TwitterOAuth {
 		return $responseInfo;
 	}
 
+	/**
+	 * Uses regular expressions to pull the value for the
+	 * requested header.
+	 *
+	 * @param  string $headers Raw response headers string
+	 * @param  string $start The header to extract followed by a colon.  Like `"Status:"`
+	 * @param  string $end (optional) The end of the header - defaults to a newline
+	 * @return string Or `false` if not found
+	 */
 	public static function extractHeader($headers, $start, $end = '\n') {
+		// The twitter response headers are lower-case now
+		$start = strtolower($start);
 		$pattern = '/' . $start . '(.*?)' . $end . '/';
 		if (preg_match($pattern, $headers, $result)) {
 			return trim($result[1]);
@@ -242,27 +272,64 @@ class TwitterOAuth {
 	 * Abstracts calling OAuth::fetch
 	 */
 	protected function fetch($url, $parameters = array(), $method = OAUTH_HTTP_METHOD_GET) {
-		$result = $this->consumer->fetch(
-			$this->normalizeUrl($url),
-			$parameters,
-			$method,
-			$this->getHTTPHeaders()
-		);
+		$url = $this->normalizeUrl($url);
+		$logger = $this->debug['logger'];
+		if ($this->debug['enabled']) {
+			$logger(
+				"Twitter response for {$method} {$url}, with params " .
+				http_build_query($parameters) . " = \n"
+			);
+		}
+		$exception = null;
+		try {
+			$result = $this->consumer->fetch(
+				$url,
+				$parameters,
+				$method,
+				$this->getHTTPHeaders()
+			);
+		} catch (OAuthException $e) {
+			$result = false;
+			$exception = $e;
+		} catch (Exception $e) {
+			$result = false;
+			$exception = $e;
+		}
 		if ($result === true) {
 			$response = $this->consumer->getLastResponse();
 			$this->currentRetries = 0;
 			if ($this->format === 'json' && $this->decode_json) {
+				if ($this->debug['enabled']) {
+					if ($url !== "https://api.twitter.com/1.1/application/rate_limit_status.json") {
+						$logger(
+							"\t" . print_r(json_decode($response, true), true) . "\n\n"
+						);
+					}
+				}
 				return json_decode($response);
 			}
 			return $response;
 		} else if ($this->retry) {
+			if ($this->debug['enabled']) {
+				$errorLog = "\tFail!";
+				if ($exception) {
+					$errorLog = " - " . $exception->getMessage() . "\n\n";
+				}
+				$logger($errorLog);
+				$responseInfo = $this->getLastResponseInfo();
+				$logger(print_r($responseInfo, true));
+			}
+
 			if ($this->currentRetries < $this->retryAttempts) {
 				$this->currentRetries++;
 				$this->fetch($url, $parameters, $method);
 			}
 		}
 		$this->currentRetries = 0;
-		throw new \OAuthException("Twitter returned an error for " . $url);
+		if ($exception) {
+			throw $exception;
+		}
+		throw new OAuthException("Twitter returned an error for " . $url);
 	}
 
 	/**
