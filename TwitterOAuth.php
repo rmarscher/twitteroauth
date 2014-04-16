@@ -66,6 +66,15 @@ class TwitterOAuth {
 	public $currentRetries = 0;
 
 	/**
+	 * Stores the current access token in use.
+	 * Requires using `$this->setToken()` and not
+	 * `$this->consumer->setToken()` for it to be updated.
+	 *
+	 * @var array
+	 */
+	public $token = null;
+
+	/**
 	 * Set API URLS
 	 */
 	const ACCESS_TOKEN_URL = 'https://api.twitter.com/oauth/access_token';
@@ -85,10 +94,7 @@ class TwitterOAuth {
 		);
 		$this->consumer->setRequestEngine(OAUTH_REQENGINE_STREAMS); // we don't need curl
 		if (!empty($oauth_token) && !empty($oauth_token_secret)) {
-			$this->consumer->setToken($oauth_token, $oauth_token_secret);
-			$this->token = array($oauth_token, $oauth_token_secret);
-		} else {
-			$this->token = null;
+			$this->setToken($oauth_token, $oauth_token_secret);
 		}
 		$this->debug['logger'] = function($msg) { error_log($msg); };
 		if ($enable_debug) {
@@ -226,13 +232,44 @@ class TwitterOAuth {
 			$oauth_verifier
 		);
 		if ($token !== false) {
-			$this->token = $token;
-			$this->consumer->setToken(
-				$token['oauth_token'],
-				$token['oauth_token_secret']
-			);
+			$this->setToken($token);
 		}
 		return $token;
+	}
+
+	/**
+	 * Sets the access token to use and stores
+	 * it in `$this->accessToken` so we know what it is.
+	 *
+	 * @param string|array $token Either the oauth_token or an array with
+	 *     `'oauth_token'`, `'oauth_token_secret'` and optionally `'user_id'`
+	 * @param string $secret
+	 * @param string $userId Twitter user id
+	 */
+	public function setToken($token, $secret = null, $userId = null) {
+		if (is_array($token)) {
+			$secret = $token['oauth_token_secret'];
+			if (!empty($token['user_id'])) {
+				$userId = $token['user_id'];
+			}
+			$token = $token['oauth_token'];
+		}
+		$this->token = array(
+			'oauth_token' => $token,
+			'oauth_token_secret' => $secret,
+			'user_id' => $userId
+		);
+		$this->consumer->setToken($token, $secret);
+	}
+
+	/**
+	 * Retrieves the access token currently in use.
+	 * If none, will return `null`.
+	 *
+	 * @return array
+	 */
+	public function getToken() {
+		return $this->token;
 	}
 
 	/**
@@ -290,6 +327,7 @@ class TwitterOAuth {
 			);
 		} catch (OAuthException $e) {
 			$result = false;
+			$e->lastResponse = json_decode($e->lastResponse, true);
 			$exception = $e;
 		} catch (Exception $e) {
 			$result = false;
